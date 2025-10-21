@@ -1,0 +1,289 @@
+---
+title: 'Next.js 14 新特性详解'
+excerpt: '全面解析 Next.js 14 的 App Router、Server Components 和性能优化等新功能。'
+date: '2024-01-10'
+tags: ['Next.js', 'React', '全栈']
+readTime: '6 分钟'
+featured: true
+---
+
+# Next.js 14 新特性详解
+
+Next.js 14 带来了许多令人兴奋的新特性和改进，包括更好的性能、更简单的开发体验和更强大的功能。
+
+## 主要新特性
+
+### 1. App Router 稳定版
+
+App Router 现在已经是稳定版本，提供了更直观的文件系统路由。
+
+```
+app/
+├── page.tsx          # 首页
+├── layout.tsx        # 根布局
+├── about/
+│   └── page.tsx      # /about 页面
+└── blog/
+    ├── page.tsx      # /blog 页面
+    └── [slug]/
+        └── page.tsx  # /blog/[slug] 动态路由
+```
+
+### 2. Server Components
+
+Server Components 允许在服务器端渲染组件，减少客户端 JavaScript 包大小。
+
+```tsx
+// app/components/ServerComponent.tsx
+async function ServerComponent() {
+  const data = await fetch('https://api.example.com/data');
+  const posts = await data.json();
+
+  return (
+    <div>
+      {posts.map(post => (
+        <article key={post.id}>
+          <h2>{post.title}</h2>
+          <p>{post.excerpt}</p>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+export default ServerComponent;
+```
+
+### 3. 改进的 Image 组件
+
+新的 Image 组件提供了更好的性能和更简单的使用方式。
+
+```tsx
+import Image from 'next/image';
+
+function MyImage() {
+  return (
+    <Image
+      src="/hero.jpg"
+      alt="Hero image"
+      width={800}
+      height={600}
+      priority // 预加载重要图片
+      placeholder="blur" // 模糊占位符
+      blurDataURL="data:image/jpeg;base64,..."
+    />
+  );
+}
+```
+
+### 4. 新的 Metadata API
+
+更简单和类型安全的元数据管理。
+
+```tsx
+// app/layout.tsx
+import type { Metadata } from 'next';
+
+export const metadata: Metadata = {
+  title: '我的博客',
+  description: '一个现代化的技术博客',
+  openGraph: {
+    title: '我的博客',
+    description: '一个现代化的技术博客',
+    type: 'website',
+  },
+};
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="zh-CN">
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+### 5. 改进的字体优化
+
+新的字体系统提供了更好的性能和更简单的使用方式。
+
+```tsx
+// app/layout.tsx
+import { Inter } from 'next/font/google';
+
+const inter = Inter({ 
+  subsets: ['latin'],
+  display: 'swap',
+});
+
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  return (
+    <html lang="zh-CN" className={inter.className}>
+      <body>{children}</body>
+    </html>
+  );
+}
+```
+
+## 性能优化
+
+### 1. 更快的构建速度
+
+Next.js 14 显著提高了构建速度，特别是在大型项目中。
+
+### 2. 改进的缓存策略
+
+新的缓存策略提供了更好的性能和更简单的配置。
+
+```tsx
+// 页面级缓存
+export const revalidate = 3600; // 1小时
+
+// 数据缓存
+async function getData() {
+  const res = await fetch('https://api.example.com/data', {
+    next: { revalidate: 3600 }
+  });
+  return res.json();
+}
+```
+
+### 3. 更好的开发体验
+
+- 更快的热重载
+- 更好的错误信息
+- 改进的 TypeScript 支持
+
+## 实际应用示例
+
+### 创建一个博客页面
+
+```tsx
+// app/blog/page.tsx
+import { Metadata } from 'next';
+import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: '博客 - 我的网站',
+  description: '查看我的最新博客文章',
+};
+
+async function getPosts() {
+  const res = await fetch('https://api.example.com/posts', {
+    next: { revalidate: 3600 }
+  });
+  return res.json();
+}
+
+export default async function BlogPage() {
+  const posts = await getPosts();
+
+  return (
+    <div className="container mx-auto px-4 py-8">
+      <h1 className="text-3xl font-bold mb-8">我的博客</h1>
+      <div className="grid gap-6">
+        {posts.map((post: any) => (
+          <article key={post.id} className="border rounded-lg p-6">
+            <h2 className="text-xl font-semibold mb-2">
+              <Link href={`/blog/${post.slug}`}>
+                {post.title}
+              </Link>
+            </h2>
+            <p className="text-gray-600 mb-4">{post.excerpt}</p>
+            <time className="text-sm text-gray-500">
+              {new Date(post.date).toLocaleDateString('zh-CN')}
+            </time>
+          </article>
+        ))}
+      </div>
+    </div>
+  );
+}
+```
+
+### 创建动态路由页面
+
+```tsx
+// app/blog/[slug]/page.tsx
+import { Metadata } from 'next';
+import { notFound } from 'next/navigation';
+
+interface Props {
+  params: { slug: string };
+}
+
+async function getPost(slug: string) {
+  const res = await fetch(`https://api.example.com/posts/${slug}`);
+  if (!res.ok) return null;
+  return res.json();
+}
+
+export async function generateMetadata({ params }: Props): Promise<Metadata> {
+  const post = await getPost(params.slug);
+  
+  if (!post) {
+    return {
+      title: '文章未找到',
+    };
+  }
+
+  return {
+    title: post.title,
+    description: post.excerpt,
+  };
+}
+
+export default async function PostPage({ params }: Props) {
+  const post = await getPost(params.slug);
+
+  if (!post) {
+    notFound();
+  }
+
+  return (
+    <article className="container mx-auto px-4 py-8">
+      <header className="mb-8">
+        <h1 className="text-4xl font-bold mb-4">{post.title}</h1>
+        <time className="text-gray-600">
+          {new Date(post.date).toLocaleDateString('zh-CN')}
+        </time>
+      </header>
+      <div 
+        className="prose max-w-none"
+        dangerouslySetInnerHTML={{ __html: post.content }}
+      />
+    </article>
+  );
+}
+```
+
+## 迁移指南
+
+### 从 Pages Router 迁移
+
+1. 创建 `app` 目录
+2. 移动页面文件到对应位置
+3. 更新导入路径
+4. 使用新的 Metadata API
+5. 测试所有路由
+
+### 更新依赖
+
+```bash
+npm install next@14 react@18 react-dom@18
+```
+
+## 总结
+
+Next.js 14 提供了许多强大的新特性，让构建现代 Web 应用变得更加简单和高效。通过合理使用这些特性，我们可以创建更好的用户体验和更快的应用。
+
+建议逐步迁移到新版本，充分利用新特性的优势。
+
