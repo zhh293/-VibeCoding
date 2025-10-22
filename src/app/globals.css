@@ -103,3 +103,74 @@
 :focus-visible {
     @apply outline-none ring-2 ring-blue-500 ring-offset-2;
 }
+
+/* 博客文章内容样式 */
+.markdown-content {
+    @apply text-gray-800 leading-relaxed;
+}
+
+.markdown-content h1 {
+    @apply text-3xl font-bold text-gray-900 mt-8 mb-4 first:mt-0;
+}
+
+.markdown-content h2 {
+    @apply text-2xl font-bold text-gray-900 mt-6 mb-3;
+}
+
+.markdown-content h3 {
+    @apply text-xl font-semibold text-gray-900 mt-5 mb-2;
+}
+
+.markdown-content h4 {
+    @apply text-lg font-semibold text-gray-900 mt-4 mb-2;
+}
+
+.markdown-content p {
+    @apply mb-4 text-gray-700 leading-relaxed;
+}
+
+.markdown-content ul {
+    @apply mb-4 ml-6;
+}
+
+.markdown-content li {
+    @apply mb-2 text-gray-700;
+}
+
+.markdown-content pre {
+    @apply bg-gray-900 text-gray-100 p-4 rounded-lg overflow-x-auto mb-4;
+}
+
+.markdown-content code {
+    @apply bg-gray-100 text-gray-800 px-2 py-1 rounded text-sm font-mono;
+}
+
+.markdown-content pre code {
+    @apply bg-transparent text-gray-100 p-0;
+}
+
+.markdown-content blockquote {
+    @apply border-l-4 border-blue-500 pl-4 italic text-gray-600 my-4;
+}
+
+.markdown-content a {
+    @apply text-blue-600 hover:text-blue-800 underline;
+}
+
+.markdown-content strong {
+    @apply font-semibold text-gray-900;
+}
+
+.markdown-content em {
+    @apply italic;
+}
+
+/* 代码高亮 */
+.markdown-content pre[class*="language-"] {
+    @apply relative;
+}
+
+.markdown-content pre[class*="language-"]::before {
+    content: attr(class);
+    @apply absolute top-2 right-2 text-xs text-gray-400 uppercase tracking-wide;
+}

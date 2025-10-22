@@ -2,78 +2,21 @@
 
 import { motion } from 'framer-motion'
 import { useInView } from 'framer-motion'
-import { useRef } from 'react'
+import { useRef, useState, useEffect } from 'react'
 import { Calendar, Clock, ArrowRight, Tag } from 'lucide-react'
+import { getBlogPosts, BlogPost } from '@/lib/blog-data'
 
 export default function Blog() {
     const ref = useRef(null)
     const isInView = useInView(ref, { once: true, margin: "-100px" })
+    const [posts, setPosts] = useState<BlogPost[]>([])
 
-    const blogPosts = [
-        {
-            title: '深入理解 React 18 并发特性',
-            excerpt: '探索 React 18 的并发渲染、Suspense 和自动批处理等新特性，以及如何在实际项目中应用这些功能。',
-            date: '2024-01-15',
-            readTime: '8 分钟',
-            tags: ['React', 'JavaScript', '前端'],
-            image: '/images/blog-1.jpg',
-            slug: 'react-18-concurrent-features',
-            featured: true
-        },
-        {
-            title: 'Next.js 14 新特性详解',
-            excerpt: '全面解析 Next.js 14 的 App Router、Server Components 和性能优化等新功能。',
-            date: '2024-01-10',
-            readTime: '6 分钟',
-            tags: ['Next.js', 'React', '全栈'],
-            image: '/images/blog-2.jpg',
-            slug: 'nextjs-14-new-features',
-            featured: true
-        },
-        {
-            title: 'TypeScript 高级类型技巧',
-            excerpt: '学习 TypeScript 的高级类型系统，包括条件类型、映射类型和模板字面量类型。',
-            date: '2024-01-05',
-            readTime: '10 分钟',
-            tags: ['TypeScript', 'JavaScript', '类型系统'],
-            image: '/images/blog-3.jpg',
-            slug: 'typescript-advanced-types',
-            featured: false
-        },
-        {
-            title: 'Tailwind CSS 最佳实践',
-            excerpt: '分享使用 Tailwind CSS 构建现代 Web 应用的最佳实践和设计模式。',
-            date: '2024-01-01',
-            readTime: '5 分钟',
-            tags: ['CSS', 'Tailwind', '设计系统'],
-            image: '/images/blog-4.jpg',
-            slug: 'tailwind-css-best-practices',
-            featured: false
-        },
-        {
-            title: 'Web 性能优化指南',
-            excerpt: '从 Core Web Vitals 到实际优化技巧，全面提升网站性能和用户体验。',
-            date: '2023-12-28',
-            readTime: '12 分钟',
-            tags: ['性能优化', 'Web Vitals', '用户体验'],
-            image: '/images/blog-5.jpg',
-            slug: 'web-performance-optimization',
-            featured: false
-        },
-        {
-            title: '现代前端工程化实践',
-            excerpt: '探讨现代前端开发中的工程化实践，包括构建工具、代码质量和部署流程。',
-            date: '2023-12-25',
-            readTime: '9 分钟',
-            tags: ['工程化', '构建工具', 'DevOps'],
-            image: '/images/blog-6.jpg',
-            slug: 'modern-frontend-engineering',
-            featured: false
-        }
-    ]
+    useEffect(() => {
+        setPosts(getBlogPosts())
+    }, [])
 
-    const featuredPosts = blogPosts.filter(post => post.featured)
-    const recentPosts = blogPosts.filter(post => !post.featured).slice(0, 3)
+    const featuredPosts = posts.filter(post => post.featured)
+    const recentPosts = posts.filter(post => !post.featured).slice(0, 3)
 
     return (
         <section ref={ref} className="section-padding bg-gray-50">
