@@ -217,9 +217,18 @@ export function saveBlogPosts(posts: BlogPost[]): void {
 // 根据slug获取单篇文章
 export function getBlogPostBySlug(slug: string): BlogPost | null {
     // 服务器端直接从默认数据查找
-    console.log('Server side: Looking for post with slug:', slug)
+    // 添加URL解码，处理中文等特殊字符
+    const decodedSlug = decodeURIComponent(slug)
+    console.log('Server side: Looking for post with slug:', slug, '(decoded:', decodedSlug, ')')
     const posts = getBlogPosts()
-    const found = posts.find(post => post.slug === slug) || null
+    // 先尝试精确匹配解码后的slug
+    let found = posts.find(post => post.slug === decodedSlug) || null
+    
+    // 如果没有找到，再尝试匹配原始slug
+    if (!found) {
+        found = posts.find(post => post.slug === slug) || null
+    }
+    
     console.log('Server side: Post found:', !!found)
     return found
 }
@@ -235,9 +244,19 @@ export function getBlogPostBySlugFromStorage(slug: string): BlogPost | null {
         return null
     }
 
-    console.log('Client side: Looking for post with slug:', slug)
+    // 添加URL解码，处理中文等特殊字符
+    const decodedSlug = decodeURIComponent(slug)
+    console.log('Client side: Looking for post with slug:', slug, '(decoded:', decodedSlug, ')')
+    
     const posts = getBlogPostsFromStorage()
-    const found = posts.find(post => post.slug === slug) || null
+    // 先尝试精确匹配解码后的slug
+    let found = posts.find(post => post.slug === decodedSlug) || null
+    
+    // 如果没有找到，再尝试匹配原始slug
+    if (!found) {
+        found = posts.find(post => post.slug === slug) || null
+    }
+    
     console.log('Client side: Post found:', !!found)
     return found
 }
@@ -313,39 +332,138 @@ export function addBlogPost(post: Omit<BlogPost, 'id' | 'slug'>): BlogPost {
 
 // 更新文章
 export function updateBlogPost(id: string, updates: Partial<Omit<BlogPost, 'id' | 'slug'>>): BlogPost | null {
-    const posts = getBlogPosts()
-    const index = posts.findIndex(post => post.id === id)
-
-    if (index === -1) return null
-
-    const updatedPost = {
-        ...posts[index],
-        ...updates
+    // 确保在客户端运行
+    if (typeof window === 'undefined') {
+        console.error('updateBlogPost called on server side')
+        return null
     }
+    
+    try {
+        // 参数验证
+        if (!id || typeof id !== 'string') {
+            console.error('Invalid post ID provided')
+            return null
+        }
+        
+        // 使用客户端存储函数获取最新数据
+        const posts = getBlogPostsFromStorage()
+        const index = posts.findIndex(post => post.id === id)
 
-    // 如果标题更新了，重新生成slug
-    if (updates.title) {
-        updatedPost.slug = updates.title
-            .toLowerCase()
-            .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
-            .replace(/^-+|-+$/g, '')
+        if (index === -1) {
+            console.log(`Update failed: Post with id ${id} not found`)
+            return null
+        }
+
+        // 创建更新后的文章对象
+        const updatedPost = {
+            ...posts[index],
+            ...updates
+        }
+
+        // 数据验证
+        if (!updatedPost.title || updatedPost.title.trim() === '') {
+            console.error('Update failed: Title cannot be empty')
+            return null
+        }
+        
+        if (!updatedPost.content || updatedPost.content.trim() === '') {
+            console.error('Update failed: Content cannot be empty')
+            return null
+        }
+
+        // 如果标题更新了，重新生成slug
+        if (updates.title) {
+            updatedPost.slug = updates.title
+                .toLowerCase()
+                .normalize('NFD') // 标准化字符
+                .replace(/[\u0300-\u036f]/g, '') // 移除重音符号
+                .replace(/[^a-z0-9\u4e00-\u9fa5]+/g, '-')
+                .replace(/^-+|-+$/g, '')
+            console.log(`Title updated, new slug generated: ${updatedPost.slug}`)
+        }
+
+        // 更新文章列表
+        posts[index] = updatedPost
+        
+        // 保存到localStorage
+        saveBlogPosts(posts)
+        
+        // 验证保存是否成功
+        const savedPosts = getBlogPostsFromStorage()
+        const savedPost = savedPosts.find(p => p.id === id)
+        
+        if (!savedPost || JSON.stringify(savedPost) !== JSON.stringify(updatedPost)) {
+            console.error('Verification failed: Post was not saved correctly')
+            return null
+        }
+        
+        console.log(`Successfully updated post: ${updatedPost.title} (${id})`)
+        return updatedPost
+    } catch (error) {
+        console.error('Error updating blog post:', error)
+        return null
     }
-
-    posts[index] = updatedPost
-    saveBlogPosts(posts)
-
-    return updatedPost
 }
 
 // 删除文章
 export function deleteBlogPost(id: string): boolean {
-    const posts = getBlogPosts()
-    const filteredPosts = posts.filter(post => post.id !== id)
+    // 确保在客户端运行
+    if (typeof window === 'undefined') {
+        console.error('deleteBlogPost called on server side')
+        return false
+    }
+    
+    try {
+        // 参数验证
+        if (!id || typeof id !== 'string') {
+            console.error('Invalid post ID provided')
+            return false
+        }
+        
+        // 使用客户端存储函数获取最新数据
+        const posts = getBlogPostsFromStorage()
+        const postToDelete = posts.find(post => post.id === id)
+        
+        if (!postToDelete) {
+            console.log(`Delete failed: Post with id ${id} not found`)
+            return false
+        }
+        
+        // 执行删除操作
+        const filteredPosts = posts.filter(post => post.id !== id)
+        
+        // 验证过滤是否成功
+        if (filteredPosts.length === posts.length) {
+            console.error('Delete operation failed: Post still exists after filtering')
+            return false
+        }
 
-    if (filteredPosts.length === posts.length) return false
-
-    saveBlogPosts(filteredPosts)
-    return true
+        // 保存到localStorage
+        saveBlogPosts(filteredPosts)
+        
+        // 验证删除是否成功
+        const savedPosts = getBlogPostsFromStorage()
+        const stillExists = savedPosts.some(post => post.id === id)
+        
+        if (stillExists) {
+            console.error('Verification failed: Post still exists after deletion')
+            return false
+        }
+        
+        console.log(`Successfully deleted post: ${postToDelete.title} (${id})`)
+        return true
+    } catch (error) {
+        console.error('Error deleting blog post:', error)
+        // 尝试清理localStorage并重试
+        try {
+            console.log('Attempting to clean localStorage and retry deletion...')
+            localStorage.removeItem(LOCAL_STORAGE_KEY)
+            return false
+        } catch (retryError) {
+            console.error('Retry failed:', retryError)
+            return false
+        }
+    }
 }
 
 // 生成阅读时间估算

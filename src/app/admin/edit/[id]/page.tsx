@@ -58,21 +58,41 @@ export default function EditPostPage() {
         }
     }, [postId, router])
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
         setError(null)
 
         try {
+            // 表单验证
+            if (!formData.title.trim()) {
+                setError('请输入文章标题')
+                setIsSubmitting(false)
+                return
+            }
+            
+            if (!formData.excerpt.trim()) {
+                setError('请输入文章摘要')
+                setIsSubmitting(false)
+                return
+            }
+            
+            if (!formData.content.trim()) {
+                setError('请输入文章内容')
+                setIsSubmitting(false)
+                return
+            }
+
             const tags = formData.tags
                 .split(',')
                 .map(tag => tag.trim())
                 .filter(tag => tag.length > 0)
 
+            // 更新文章
             const updatedPost = updateBlogPost(postId, {
-                title: formData.title,
-                excerpt: formData.excerpt,
-                content: formData.content,
+                title: formData.title.trim(),
+                excerpt: formData.excerpt.trim(),
+                content: formData.content.trim(),
                 tags,
                 featured: formData.featured,
                 readTime: calculateReadTime(formData.content)
@@ -80,14 +100,34 @@ export default function EditPostPage() {
 
             if (updatedPost) {
                 console.log(`Post updated successfully, redirecting to: /blog/${updatedPost.slug}`)
-                // 使用window.location.href确保页面完全刷新
-                window.location.href = `/blog/${updatedPost.slug}`
+                // 使用router.push确保更好的导航体验
+                router.push(`/blog/${updatedPost.slug}`)
             } else {
-                setError('更新文章时发生错误，请重试')
+                setError('更新文章时发生错误，请重试。可能是数据保存失败或文章已被删除。')
+                // 提供重试按钮的提示
+                setTimeout(() => {
+                    console.log('Refreshing page data after failed update')
+                    // 重新加载页面数据
+                    const posts = getBlogPostsFromStorage()
+                    const freshPost = posts.find(p => p.id === postId)
+                    if (freshPost) {
+                        setPost(freshPost)
+                        setFormData({
+                            title: freshPost.title,
+                            excerpt: freshPost.excerpt,
+                            content: freshPost.content,
+                            tags: freshPost.tags.join(', '),
+                            featured: freshPost.featured
+                        })
+                    } else {
+                        setError('文章已不存在，正在返回管理页面...')
+                        setTimeout(() => router.push('/admin'), 2000)
+                    }
+                }, 1000)
             }
         } catch (err) {
             console.error('Error updating post:', err)
-            setError('更新文章时发生错误，请重试')
+            setError('更新文章时发生错误，请刷新页面后重试')
         } finally {
             setIsSubmitting(false)
         }

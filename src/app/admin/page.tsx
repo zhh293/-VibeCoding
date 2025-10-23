@@ -28,10 +28,33 @@ export default function AdminPage() {
     }, [])
 
     const handleDelete = (id: string) => {
-        if (confirm('确定要删除这篇文章吗？此操作无法撤销。')) {
-            const success = deleteBlogPost(id)
-            if (success) {
-                setPosts(getBlogPostsFromStorage())
+        // 获取要删除的文章信息，用于显示更友好的提示
+        const postToDelete = posts.find(post => post.id === id)
+        const postTitle = postToDelete?.title || '这篇文章'
+        
+        if (confirm(`确定要删除文章 "${postTitle}" 吗？此操作无法撤销。`)) {
+            try {
+                // 添加一个临时状态，显示删除中
+                console.log(`Deleting post: ${postTitle} (${id})`)
+                
+                const success = deleteBlogPost(id)
+                
+                if (success) {
+                    // 更新文章列表
+                    const updatedPosts = getBlogPostsFromStorage()
+                    setPosts(updatedPosts)
+                    
+                    // 显示成功提示
+                    alert(`文章 "${postTitle}" 已成功删除！`)
+                } else {
+                    // 显示失败提示
+                    alert(`删除文章失败！可能是因为文章不存在或数据保存失败。请刷新页面后重试。`)
+                    // 重新加载文章列表
+                    setPosts(getBlogPostsFromStorage())
+                }
+            } catch (error) {
+                console.error('Error during delete operation:', error)
+                alert('删除文章时发生错误！请刷新页面后重试。')
             }
         }
     }
