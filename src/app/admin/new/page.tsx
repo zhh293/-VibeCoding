@@ -4,7 +4,7 @@ import { useState } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Eye } from 'lucide-react'
-import { BlogPost, createBlogPost, calculateReadTime, LOCAL_STORAGE_KEY, cleanupOldKeys } from '@/lib/blog-data'
+import { createPost, calculateReadTime } from '@/lib/blog-api'
 
 export default function NewPostPage() {
     const router = useRouter()
@@ -24,33 +24,21 @@ export default function NewPostPage() {
         setError(null)
 
         try {
-            // 清理旧键名
-            cleanupOldKeys()
-            console.log(`Using localStorage key: ${LOCAL_STORAGE_KEY}`)
-            
             const tags = formData.tags
                 .split(',')
                 .map(tag => tag.trim())
                 .filter(tag => tag.length > 0)
 
-            const newPost = createBlogPost({
+            const newPost = await createPost({
                 title: formData.title,
                 excerpt: formData.excerpt,
                 content: formData.content,
                 tags,
                 featured: formData.featured,
-                date: new Date().toISOString().split('T')[0],
-                readTime: calculateReadTime(formData.content)
             })
 
             console.log('New post created with slug:', newPost.slug)
-            console.log('Redirecting to:', `/blog/${newPost.slug}`)
-            
-            // 添加短暂延迟确保localStorage已保存
-            setTimeout(() => {
-                // 使用window.location.href代替router.push，确保页面完全刷新
-                window.location.href = `/blog/${newPost.slug}`
-            }, 100)
+            window.location.href = `/blog/${newPost.slug}`
         } catch (err) {
             console.error('Error creating post:', err)
             setError('创建文章时发生错误，请重试')

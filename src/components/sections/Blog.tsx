@@ -4,7 +4,7 @@ import { motion } from 'framer-motion'
 import { useInView } from 'framer-motion'
 import { useRef, useState, useEffect } from 'react'
 import { Calendar, Clock, ArrowRight, Tag } from 'lucide-react'
-import { getBlogPosts, BlogPost } from '@/lib/blog-data'
+import { fetchPosts, BlogPost } from '@/lib/blog-api'
 
 export default function Blog() {
     const ref = useRef(null)
@@ -12,7 +12,15 @@ export default function Blog() {
     const [posts, setPosts] = useState<BlogPost[]>([])
 
     useEffect(() => {
-        setPosts(getBlogPosts())
+        const load = async () => {
+            try {
+                const all = await fetchPosts()
+                setPosts(all)
+            } catch (e) {
+                console.error('加载首页文章失败', e)
+            }
+        }
+        load()
     }, [])
 
     const featuredPosts = posts.filter(post => post.featured)

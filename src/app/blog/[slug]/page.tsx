@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { notFound } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Calendar, Clock, Tag } from 'lucide-react'
-import { getBlogPostBySlugFromStorage, BlogPost, cleanupOldKeys, LOCAL_STORAGE_KEY } from '@/lib/blog-data'
+import { fetchPostBySlug, BlogPost } from '@/lib/blog-api'
 
 export default function BlogPostPage({ params }: { params: { slug: string } }) {
   const [post, setPost] = useState<BlogPost | null>(null)
@@ -12,57 +12,23 @@ export default function BlogPostPage({ params }: { params: { slug: string } }) {
   const [error, setError] = useState(false)
 
   useEffect(() => {
-    // 确保在客户端环境中运行
-    if (typeof window !== 'undefined') {
-      console.log('Blog post page loading for slug:', params.slug)
-      
-      // 首先清理旧的localStorage键名并迁移数据
-      cleanupOldKeys()
-      console.log(`使用localStorage键名: ${LOCAL_STORAGE_KEY}`)
-      
-      // 使用专用的客户端存储函数
-      const fetchPostWithRetry = () => {
-        // 每次重试都先刷新localStorage中的数据
-        const posts = getBlogPostBySlugFromStorage(params.slug)
-        return posts
-      }
-
-      // 立即尝试获取
-      let foundPost = fetchPostWithRetry()
-      
-      if (foundPost) {
-        console.log('Post found on first attempt')
-        setPost(foundPost)
+    const load = async () => {
+      try {
+        console.log('Blog post page loading for slug:', params.slug)
+        const foundPost = await fetchPostBySlug(params.slug)
+        if (foundPost) {
+          setPost(foundPost)
+        } else {
+          setError(true)
+        }
+      } catch (e) {
+        console.error('Error loading post:', e)
+        setError(true)
+      } finally {
         setIsLoading(false)
-      } else {
-        console.log('Post not found on first attempt, retrying...')
-        // 设置多次重试
-        let retryCount = 0
-        const maxRetries = 8 // 增加重试次数
-        const retryInterval = 300 // 增加重试间隔
-
-        const retryTimer = setInterval(() => {
-          retryCount++
-          console.log(`Retry attempt #${retryCount} for slug: ${params.slug}`)
-          
-          foundPost = fetchPostWithRetry()
-          if (foundPost || retryCount >= maxRetries) {
-            clearInterval(retryTimer)
-            
-            if (foundPost) {
-              console.log('Post found on retry attempt')
-              setPost(foundPost)
-            } else {
-              console.log('Failed to find post after all retries')
-              setError(true)
-            }
-            setIsLoading(false)
-          }
-        }, retryInterval)
-        
-        return () => clearInterval(retryTimer)
       }
     }
+    load()
   }, [params.slug])
 
   if (isLoading) {

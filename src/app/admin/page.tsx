@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Plus, Edit, Trash2, Eye, ArrowLeft } from 'lucide-react'
-import { BlogPost, getBlogPostsFromStorage, deleteBlogPost, LOCAL_STORAGE_KEY, cleanupOldKeys } from '@/lib/blog-data'
+import { BlogPost, fetchPosts, deletePost } from '@/lib/blog-api'
 
 export default function AdminPage() {
     const [posts, setPosts] = useState<BlogPost[]>([])
@@ -12,45 +12,38 @@ export default function AdminPage() {
 
     useEffect(() => {
         console.log('Admin page loading...')
-        try {
-            // 清理旧键名
-            cleanupOldKeys()
-            console.log(`Using localStorage key: ${LOCAL_STORAGE_KEY}`)
-            const blogPosts = getBlogPostsFromStorage()
-            console.log(`Retrieved ${blogPosts.length} posts`)
-            setPosts(blogPosts)
-        } catch (err) {
-            console.error('Error loading posts:', err)
-            setError('加载文章时出错')
-        } finally {
-            setIsLoading(false)
+        const load = async () => {
+            try {
+                const blogPosts = await fetchPosts()
+                console.log(`Retrieved ${blogPosts.length} posts`)
+                setPosts(blogPosts)
+            } catch (err) {
+                console.error('Error loading posts:', err)
+                setError('加载文章时出错')
+            } finally {
+                setIsLoading(false)
+            }
         }
+        load()
     }, [])
 
-    const handleDelete = (id: string) => {
+    const handleDelete = async (id: string) => {
         // 获取要删除的文章信息，用于显示更友好的提示
         const postToDelete = posts.find(post => post.id === id)
         const postTitle = postToDelete?.title || '这篇文章'
         
         if (confirm(`确定要删除文章 "${postTitle}" 吗？此操作无法撤销。`)) {
             try {
-                // 添加一个临时状态，显示删除中
                 console.log(`Deleting post: ${postTitle} (${id})`)
-                
-                const success = deleteBlogPost(id)
-                
+                const success = await deletePost(id)
                 if (success) {
-                    // 更新文章列表
-                    const updatedPosts = getBlogPostsFromStorage()
+                    const updatedPosts = await fetchPosts()
                     setPosts(updatedPosts)
-                    
-                    // 显示成功提示
                     alert(`文章 "${postTitle}" 已成功删除！`)
                 } else {
-                    // 显示失败提示
                     alert(`删除文章失败！可能是因为文章不存在或数据保存失败。请刷新页面后重试。`)
-                    // 重新加载文章列表
-                    setPosts(getBlogPostsFromStorage())
+                    const updatedPosts = await fetchPosts()
+                    setPosts(updatedPosts)
                 }
             } catch (error) {
                 console.error('Error during delete operation:', error)

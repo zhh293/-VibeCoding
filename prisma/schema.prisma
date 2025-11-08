@@ -1,0 +1,38 @@
+// Prisma schema for blog persistence
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model BlogPost {
+  id        String   @id @default(uuid())
+  title     String
+  excerpt   String
+  content   String
+  date      DateTime
+  readTime  String
+  tags      Json
+  featured  Boolean  @default(false)
+  slug      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+// Portfolio projects persistence
+model Project {
+  id          String   @id @default(uuid())
+  title       String
+  description String
+  image       String?
+  tags        Json
+  github      String?
+  demo        String?
+  featured    Boolean  @default(false)
+  slug        String   @unique
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}

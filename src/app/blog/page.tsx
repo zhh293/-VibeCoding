@@ -3,40 +3,28 @@
 import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { Calendar, Clock, ArrowRight, Tag, Settings } from 'lucide-react'
-import { getBlogPostsFromStorage, BlogPost, cleanupOldKeys, LOCAL_STORAGE_KEY } from '@/lib/blog-data'
+import { fetchPosts, BlogPost } from '@/lib/blog-api'
 
 export default function BlogPage() {
     const [posts, setPosts] = useState<BlogPost[]>([])
     const [isLoading, setIsLoading] = useState(true)
 
     useEffect(() => {
-        // 客户端渲染时获取文章数据
-        if (typeof window !== 'undefined') {
-            console.log('Blog page loading posts...')
-            
-            // 首先清理旧的localStorage键名并迁移数据
-            cleanupOldKeys()
-            console.log(`使用localStorage键名: ${LOCAL_STORAGE_KEY}`)
-            
-            // 使用专用的客户端存储函数
-            const loadPosts = () => {
-                const posts = getBlogPostsFromStorage()
+        const loadPosts = async () => {
+            try {
+                console.log('Blog page loading posts...')
+                const posts = await fetchPosts()
                 console.log('Loaded posts count:', posts.length)
                 setPosts(posts)
+            } catch (e) {
+                console.error('加载文章失败', e)
+            } finally {
                 setIsLoading(false)
             }
-            
-            // 立即加载
-            loadPosts()
-            
-            // 设置定时刷新，确保能看到最新添加的文章
-            const interval = setInterval(() => {
-                console.log('Refreshing posts...')
-                loadPosts()
-            }, 2000) // 每2秒刷新一次
-            
-            return () => clearInterval(interval)
         }
+        loadPosts()
+        const interval = setInterval(loadPosts, 2000)
+        return () => clearInterval(interval)
     }, [])
 
     if (isLoading) {

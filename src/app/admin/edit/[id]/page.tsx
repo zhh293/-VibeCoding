@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import Link from 'next/link'
 import { ArrowLeft, Save, Eye } from 'lucide-react'
-import { getBlogPostsFromStorage, updateBlogPost, calculateReadTime, BlogPost, LOCAL_STORAGE_KEY, cleanupOldKeys } from '@/lib/blog-data'
+import { fetchPostById, updatePost, calculateReadTime, BlogPost } from '@/lib/blog-api'
 
 export default function EditPostPage() {
     const router = useRouter()
@@ -25,40 +25,34 @@ export default function EditPostPage() {
 
     useEffect(() => {
         console.log(`Loading post for editing: ${postId}`)
-        try {
-            // 清理旧键名
-            cleanupOldKeys()
-            console.log(`Using localStorage key: ${LOCAL_STORAGE_KEY}`)
-            
-            const posts = getBlogPostsFromStorage()
-            console.log(`Retrieved ${posts.length} posts from storage`)
-            
-            const foundPost = posts.find(p => p.id === postId)
-            console.log(`Found post: ${foundPost ? 'Yes' : 'No'}`)
-
-            if (!foundPost) {
-                console.log('Post not found, redirecting to admin')
-                router.push('/admin')
-                return
+        const load = async () => {
+            try {
+                const foundPost = await fetchPostById(postId)
+                console.log(`Found post: ${foundPost ? 'Yes' : 'No'}`)
+                if (!foundPost) {
+                    console.log('Post not found, redirecting to admin')
+                    router.push('/admin')
+                    return
+                }
+                setPost(foundPost)
+                setFormData({
+                    title: foundPost.title,
+                    excerpt: foundPost.excerpt,
+                    content: foundPost.content,
+                    tags: foundPost.tags.join(', '),
+                    featured: foundPost.featured
+                })
+            } catch (err) {
+                console.error('Error loading post for editing:', err)
+                setError('加载文章失败')
+            } finally {
+                setIsLoading(false)
             }
-
-            setPost(foundPost)
-            setFormData({
-                title: foundPost.title,
-                excerpt: foundPost.excerpt,
-                content: foundPost.content,
-                tags: foundPost.tags.join(', '),
-                featured: foundPost.featured
-            })
-        } catch (err) {
-            console.error('Error loading post for editing:', err)
-            setError('加载文章失败')
-        } finally {
-            setIsLoading(false)
         }
+        load()
     }, [postId, router])
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault()
         setIsSubmitting(true)
         setError(null)
@@ -89,42 +83,16 @@ export default function EditPostPage() {
                 .filter(tag => tag.length > 0)
 
             // 更新文章
-            const updatedPost = updateBlogPost(postId, {
+            const updatedPost = await updatePost(postId, {
                 title: formData.title.trim(),
                 excerpt: formData.excerpt.trim(),
                 content: formData.content.trim(),
                 tags,
                 featured: formData.featured,
-                readTime: calculateReadTime(formData.content)
             })
 
-            if (updatedPost) {
-                console.log(`Post updated successfully, redirecting to: /blog/${updatedPost.slug}`)
-                // 使用router.push确保更好的导航体验
-                router.push(`/blog/${updatedPost.slug}`)
-            } else {
-                setError('更新文章时发生错误，请重试。可能是数据保存失败或文章已被删除。')
-                // 提供重试按钮的提示
-                setTimeout(() => {
-                    console.log('Refreshing page data after failed update')
-                    // 重新加载页面数据
-                    const posts = getBlogPostsFromStorage()
-                    const freshPost = posts.find(p => p.id === postId)
-                    if (freshPost) {
-                        setPost(freshPost)
-                        setFormData({
-                            title: freshPost.title,
-                            excerpt: freshPost.excerpt,
-                            content: freshPost.content,
-                            tags: freshPost.tags.join(', '),
-                            featured: freshPost.featured
-                        })
-                    } else {
-                        setError('文章已不存在，正在返回管理页面...')
-                        setTimeout(() => router.push('/admin'), 2000)
-                    }
-                }, 1000)
-            }
+            console.log(`Post updated successfully, redirecting to: /blog/${updatedPost.slug}`)
+            router.push(`/blog/${updatedPost.slug}`)
         } catch (err) {
             console.error('Error updating post:', err)
             setError('更新文章时发生错误，请刷新页面后重试')
