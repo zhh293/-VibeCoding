@@ -1,5 +1,131 @@
 # 个人博客项目
 
+一个基于 Next.js 14、TypeScript、Prisma 的个人博客与作品集项目。已接入 SQLite 数据库，支持博客与项目模块的持久化存储与完整 CRUD。
+
+## 快速开始
+
+- 环境要求：Node.js 18+、npm
+- 代码目录：`e:\-VibeCoding`（使用相对路径操作即可）
+
+### 1) 安装依赖
+
+```bash
+npm install
+```
+
+### 2) 配置数据库环境
+
+- `.env` 已内置 SQLite 连接字符串（基于 `prisma/schema.prisma`）：
+
+```env
+DATABASE_URL="file:./dev.db"
+```
+
+- 说明：SQLite 文件默认位于 `prisma/dev.db`。
+- 如需切换 MySQL/Postgres，将 `.env` 中的 `DATABASE_URL` 替换为对应连接串即可。
+
+### 3) 初始化数据库（迁移与生成 Client）
+
+```bash
+# 应用现有迁移（会自动生成 Prisma Client）
+npx prisma migrate dev
+
+# 可选：手动生成 Prisma Client（若需要）
+npx prisma generate
+```
+
+### 4) 初始化示例数据（种子）
+
+```bash
+node prisma/seed.js
+```
+
+- 该脚本是幂等的：若已有博客或项目数据，会跳过对应的插入。
+- 种子包含两篇博客与若干项目条目（含 `featured`、`tags`、`slug` 等字段）。
+
+### 5) 启动开发服务器
+
+```bash
+npm run dev
+```
+
+- 启动后默认端口 `3000`，若占用会自动使用 `3001`。
+
+### 6) 可视化查看数据（可选）
+
+```bash
+npx prisma studio
+```
+
+- 打开 Prisma Studio 管理 `BlogPost` 与 `Project` 数据。
+
+## 项目模块（Projects）
+
+- 后端接口（App Router）：
+  - `GET /api/projects`：获取项目列表，支持 `?featured=true` 过滤。
+  - `POST /api/projects`：创建项目（自动生成 `slug`，校验必填与重复）。
+  - `GET /api/projects/:id`：按 `id` 获取项目详情。
+  - `PUT /api/projects/:id`：更新项目（支持自动生成 `slug`）。
+  - `DELETE /api/projects/:id`：删除项目。
+  - `GET /api/projects/slug/:slug`：按 `slug` 获取项目详情。
+
+- 前端 API 库：`src/lib/project-api.ts`
+  - `fetchProjects()`、`fetchProjectById(id)`、`fetchProjectBySlug(slug)`
+  - `createProject(data)`、`updateProject(id, data)`、`deleteProject(id)`
+
+- 管理界面（Admin）：
+  - 列表页：`/admin/projects`（查看、跳转编辑、删除）
+  - 新建页：`/admin/projects/new`（表单创建）
+  - 编辑页：`/admin/projects/edit/:id`（加载、表单更新）
+
+- 展示页：
+  - `src/components/sections/Projects.tsx` 从接口拉取并展示“精选项目 / 更多项目”。
+
+### 字段规范
+
+- 项目：`title`、`description`、`tags`（字符串数组）、`github`、`demo`、`featured`（布尔）、`slug`（唯一）
+- 博客：`title`、`excerpt`、`content`、`date`、`readTime`、`tags`（字符串数组）、`featured`、`slug`
+
+## 常见问题（Windows）
+
+- 若执行迁移或生成 Client 时出现 `EPERM: operation not permitted, rename 'query_engine-windows.dll.node'`：
+  - 关闭正在运行的开发服务器（避免文件被占用）。
+  - 确认杀毒软件未占用 `node_modules/.prisma/client/*` 文件。
+  - 重新执行：
+    ```bash
+    npx prisma generate
+    npx prisma migrate dev
+    ```
+  - 仍异常时，可尝试删除 `node_modules/.prisma` 后重新安装依赖与生成。
+
+## 目录结构（关键路径）
+
+- `prisma/schema.prisma`：Prisma 数据模型（`BlogPost`、`Project`）。
+- `prisma/seed.js`：示例数据种子脚本（幂等）。
+- `src/lib/prisma.ts`：Prisma Client 实例（后端接口使用）。
+- `src/app/api/projects/*`：项目相关接口（CRUD 与 slug 查询）。
+- `src/lib/project-api.ts`：前端项目 API 封装。
+- `src/app/admin/projects/*`：项目管理界面。
+
+## 示例：在页面或组件中创建项目
+
+```ts
+import { createProject } from '@/lib/project-api'
+
+await createProject({
+  title: '我的新项目',
+  description: '这是一个演示项目',
+  tags: ['Next.js', 'TypeScript'],
+  github: 'https://github.com/your/repo',
+  demo: 'https://demo.example.com',
+  featured: true,
+})
+```
+
+---
+
+如需将数据库切换到 MySQL/Postgres，或扩展权限与鉴权（仅允许登录用户在 Admin 管理），欢迎提出具体需求，我可以继续完善相关配置与文档。
+
 基于完整项目文档开发的现代化个人博客系统，集内容管理、社交互动、个人品牌展示于一体。
 
 ## ✨ 项目特色
