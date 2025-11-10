@@ -1,5 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+    // 为 Baota/PM2 的独立运行输出 standalone 构建产物
+    output: 'standalone',
     images: {
         domains: ['localhost'],
         formats: ['image/webp', 'image/avif'],
